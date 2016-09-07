@@ -4,14 +4,14 @@
 class OutputCapture
 {
 public:
-        void setup(Ogre::Camera * camera, Ogre::RenderWindow *window, bool color, bool depth);
+        void setup(Ogre::Camera * camera, Ogre::RenderWindow *window, bool color = true, bool depth = false);
         void capture();
 protected:
         void captureColor();
         void captureDepth();
         Ogre::RenderWindow *window = 0;
         int mode = 0;
-        MultiRenderTarget * mrt;
+        //MultiRenderTarget * mrt;
 
 };
 
@@ -112,6 +112,7 @@ void OutputCapture::captureColor()
 
 void OutputCapture::captureDepth()
 {
+#if 0
     Ogre::TexturePtr dynTexPtr = Ogre::TextureManager::getSingleton().getByName("rtfd");
 
     Ogre::RenderTexture* RTarget = dynTexPtr->getBuffer()->getRenderTarget();
@@ -144,5 +145,6 @@ void OutputCapture::captureDepth()
 #endif
 #endif
     // Unlock the pixel buffer
-    mPixelBuffer->unlock();        
+    mPixelBuffer->unlock();  
+#endif      
 }

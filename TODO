@@ -1,0 +1,8 @@
+
+- mesh loading:
+	direct using AssImp and mapping to OGRE
+	indirect using some converter from AssImp
+- test background image: static/live
+- flat shading
+- ? decal shading
+- axis indicators

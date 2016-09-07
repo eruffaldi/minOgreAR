@@ -8,6 +8,7 @@
  */
 #include <Ogre.h> 
 #include <Eigen/Dense>
+#include "capture.hpp"
 
 using namespace Ogre; 
 
@@ -104,17 +105,20 @@ public:
         MinOgre();
         ~MinOgre();
 
+
         void setCameraPose();
         void setBackground();
+       void addMesh(std::string filename, std::string meshname);
 
-        Ogre::Root *root;
+        SceneManager* sceneMgr;        Ogre::Root *root;
+        Camera* camera;
 protected:
+      void initRoot();
         void createCamera();
 
 
         RenderWindow* window;
-        SceneManager* sceneMgr;
-        Camera* camera;
+
         //OutputCapture capture;
         ImageBackground background;
 
@@ -125,48 +129,100 @@ MinOgre::~MinOgre()
         delete root;
 }
 
+void MinOgre::initRoot()
+{
+        root = new Root("plugins.cfg"); // pluginsOGRE_BUILD_SUFFIX.cfg, "ogre.cfg", "Ogre.log");
+            bool canInit = true;
+            bool mshowConfigDialog = false;
+      if(mshowConfigDialog){
+        root->restoreConfig();
+        if(!root->showConfigDialog())
+          canInit = false;
+      }
+      else{
+        if(!root->restoreConfig())
+          canInit = false;
+      }
+        if(!root->isInitialised()){
+          if(!canInit){ //We set the default renderer system
+            const Ogre::RenderSystemList& lRenderSystemList = root->getAvailableRenderers();
+            if( lRenderSystemList.size() == 0 )
+            {
+              std::cout << "No renderers\n;" ;
+              throw "ConfigDialog aborted"; // Exit the application on cancel
+            }
+
+            Ogre::RenderSystem *lRenderSystem = lRenderSystemList.at(0);
+            std::cout << "Using " << lRenderSystem->getName() << " as renderer." << std::endl;
+            root->setRenderSystem(lRenderSystem);
+          }
+          root->initialise(false);
+        }  
+         std::cerr << "initialise done\n";
+       
+}
+
 MinOgre::MinOgre()
 {
         // MULTIPLE: Ogre::Root::getSingletonPtr()
-        root = new Root(); // pluginsOGRE_BUILD_SUFFIX.cfg, "ogre.cfg", "Ogre.log");
-
-        #if defined(_DEBUG)
-                root->loadPlugin("C:/OGRESDK/bin/debug/RenderSystem_GL_d.dll");
-                //Linux
-                //root->loadPlugin("/usr/local/lib/OGRE/RenderSystem_GL_d");  
-        #else
-                root->loadPlugin("C:/OGRESDK/bin/release/RenderSystem_GL.dll");
-                //Linux
-                //root->loadPlugin("/usr/local/lib/OGRE/RenderSystem_GL");  
-        #endif
+        initRoot();
 
 
 
-        const Ogre::RenderSystemList& rs = root->getAvailableRenderers();
-        if(&rs && rs.size()&&rs.at(0)->getName().compare("RenderSystem_GL")){ 
-                 RenderSystem * r=rs.at(0); 
-                root->setRenderSystem(r); 
-                 r->setConfigOption("Full Screen","No");  
-                 r->setConfigOption("Video Mode","800 x 600 @ 16-bit colour"); 
-         }
-         else{ 
-         exit(1); 
-        }         
         ResourceGroupManager &resources=ResourceGroupManager::getSingleton(); 
-        resources.addResourceLocation("data","FileSystem"); 
+        resources.addResourceLocation(".","FileSystem"); 
         resources.initialiseAllResourceGroups();         
+         std::cerr << "resource done\n";
+        sceneMgr = root->createSceneManager(ST_GENERIC); 
 
         window = root->initialise(true, "Simple Ogre App"); 
-          Ogre::Viewport* viewPort = window->addViewport(camera);
-        //   Ogre::Viewport* viewPort = mCamera->getViewport();
-          viewPort->setClearEveryFrame(true);
-
-        sceneMgr = root->createSceneManager(ST_GENERIC); 
+         std::cerr << "window done\n";
         createCamera(); 
-        background.setup(sceneMgr,128,128);
+         std::cerr << "camera done\n";
 
+//          Ogre::Viewport* viewPort = window->addViewport(camera);
+           Ogre::Viewport* viewPort = camera->getViewport();
+          viewPort->setClearEveryFrame(true);
+         std::cerr << "viewport done\n";
 
+        std::cerr << "creating scene\n";
         sceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(camera); 
+        std::cerr << "creating camera\n";
+        std::cerr << "creating background\n";
+       // background.setup(sceneMgr,128,128);
+        sceneMgr->setAmbientLight(Ogre::ColourValue(0.5, 0.5, 0.5));
+
+/*
+  mRoot->addFrameListener(this);
+
+  // Register as a Window listener
+  Ogre::WindowEventUtilities::addWindowEventListener(mWindow, this);
+  mInputManager = OIS::InputManager::createInputSystem( pl );
+
+  //Create all devices
+  // Here we only consider the keyboard input
+  mKeyboard = static_cast<OIS::Keyboard*>(mInputManager->createInputObject( OIS::OISKeyboard, bufferedKeys ));
+  if ( !bufferedKeys ) mKeyboard->setEventCallback ( this);
+
+    Ogre::WindowEventUtilities::removeWindowEventListener(mWindow, this);
+#ifdef VISP_HAVE_OIS
+  // Get keyboard input
+  mKeyboard->capture();
+  if(mKeyboard->isKeyDown(OIS::KC_ESCAPE))
+    return false;
+#endif
+
+*/
+
+        std::cerr << "attach camera to scene\n";
+}
+
+void MinOgre::addMesh(std::string filename, std::string meshname)
+{
+  Ogre::Entity *newEntity = sceneMgr->createEntity(meshname, filename);
+  Ogre::SceneNode *newNode = sceneMgr->getRootSceneNode()->createChildSceneNode(meshname);
+  newNode->attachObject(newEntity);
+
 }
 
 void MinOgre::setCameraPose()
@@ -209,21 +265,23 @@ int main(int argc, char **argv)
 { 
 #endif
         MinOgre mo;
+        mo.addMesh("rviz_cube.mesh","test");
+        mo.camera->setPosition(0, 10, 50);
 
-/*
-    Ogre::Light * light = ogre.getSceneManager()->createLight();
+
+    Ogre::Light * light = mo.sceneMgr->createLight();
     light->setDiffuseColour(1, 1, 1); // scaled RGB values
     light->setSpecularColour(1, 1, 1); // scaled RGB values
     light->setPosition(-5, -5, 10);
     light->setType(Ogre::Light::LT_POINT);
-*/
-         int running=1000; 
-         while(running--) 
+
+    std::cout << "starting loop\n";
+         while(true) 
          { 
                  WindowEventUtilities::messagePump(); 
                  mo.root->renderOneFrame(); 
-                 printf("%d\n",running); 
          } 
+    std::cout << "ending loop\n";
 
  return 0; 
 }
